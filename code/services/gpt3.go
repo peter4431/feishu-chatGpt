@@ -77,6 +77,8 @@ func Completions(msg string) (string, error) {
 	}
 	defer response.Body.Close()
 	if response.StatusCode/2 != 100 {
+		body, _ := ioutil.ReadAll(response.Body)
+		fmt.Printf("gpt api rsp:%s\n", body)
 		return "", fmt.Errorf("gtp api %s", response.Status)
 	}
 	body, err := ioutil.ReadAll(response.Body)
