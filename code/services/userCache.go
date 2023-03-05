@@ -1,8 +1,8 @@
 package services
 
 import (
-	"fmt"
 	"github.com/patrickmn/go-cache"
+	"start-feishubot/types"
 	"time"
 )
 
@@ -12,6 +12,19 @@ type UserService struct {
 
 var userServices *UserService
 
+// GetList 获得用于请求 chat/completion 的数据
+func (u UserService) GetList(userId string) []*types.ChatMsg {
+	// 获取用户的会话上下文
+	sessionContext, ok := u.cache.Get(userId)
+	if !ok {
+		return nil
+	}
+	//list to string
+	list := sessionContext.([]*types.ChatMsgPair)
+	var pairs = types.NewChatMsgPairs(list)
+	return pairs.GetList()
+}
+
 func (u UserService) Get(userId string) string {
 	// 获取用户的会话上下文
 	sessionContext, ok := u.cache.Get(userId)
@@ -19,12 +32,9 @@ func (u UserService) Get(userId string) string {
 		return ""
 	}
 	//list to string
-	list := sessionContext.([]string)
-	var result string
-	for _, v := range list {
-		result += v
-	}
-	return result
+	list := sessionContext.([]*types.ChatMsgPair)
+	var pairs = types.NewChatMsgPairs(list)
+	return pairs.GetReqStr()
 }
 
 func (u UserService) Set(userId string, question, reply string) {
@@ -34,11 +44,16 @@ func (u UserService) Set(userId string, question, reply string) {
 	maxCache := 8
 	maxLength := 2048
 	maxCacheTime := time.Minute * 30
-	listOut := make([]string, maxCache)
-	value := fmt.Sprintf("Q:%s\nA:%s\n\n", question, reply)
+	listOut := make([]*types.ChatMsgPair, 0)
+
+	value := &types.ChatMsgPair{
+		Q: question,
+		A: reply,
+	}
+
 	raw, ok := u.cache.Get(userId)
 	if ok {
-		listOut = raw.([]string)
+		listOut = raw.([]*types.ChatMsgPair)
 		if len(listOut) == maxCache {
 			listOut = listOut[1:]
 		}
@@ -60,6 +75,7 @@ func (u UserService) Clear(userId string) bool {
 }
 
 type UserCacheInterface interface {
+	GetList(userId string) []*types.ChatMsg
 	Get(userId string) string
 	Set(userId string, question, reply string)
 	Clear(userId string) bool
@@ -72,10 +88,10 @@ func GetUserCache() UserCacheInterface {
 	return userServices
 }
 
-func getStrPoolTotalLength(strPool []string) int {
+func getStrPoolTotalLength(strPool []*types.ChatMsgPair) int {
 	var total int
 	for _, v := range strPool {
-		total += len(v)
+		total += len(v.GetReqStr())
 	}
 	return total
 }

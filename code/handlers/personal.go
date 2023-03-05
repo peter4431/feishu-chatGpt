@@ -5,6 +5,7 @@ import (
 	"fmt"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 	"start-feishubot/services"
+	"start-feishubot/types"
 )
 
 type PersonalMessageHandler struct {
@@ -36,9 +37,12 @@ func (p PersonalMessageHandler) handle(ctx context.Context, event *larkim.P2Mess
 		return nil
 	}
 
-	prompt := p.userCache.Get(*openId)
-	prompt = fmt.Sprintf("%s\nQ:%s\nA:", prompt, qParsed)
-	completions, err := services.Completions(prompt)
+	var (
+		completions string
+		err         error
+	)
+	completions, err = p.sendPrompt(ctx, *openId, qParsed)
+
 	ok := true
 	if err != nil {
 		sendMsg(ctx, fmt.Sprintf("🤖️：消息机器人摆烂了，请稍后再试～\n错误信息: %v", err), chatId)
@@ -56,12 +60,28 @@ func (p PersonalMessageHandler) handle(ctx context.Context, event *larkim.P2Mess
 		}
 	}
 	return nil
+}
 
+func (p PersonalMessageHandler) sendPrompt(ctx context.Context, userId string, qStr string) (res string, err error) {
+	var useChatCompletion = true // 使用新接口
+	if useChatCompletion {
+		msgList := p.userCache.GetList(userId)
+		msgList = append(msgList, &types.ChatMsg{
+			Role:    types.RoleUser,
+			Content: qStr,
+		})
+		res, err = services.ChatCompletion(msgList)
+	} else {
+		prompt := p.userCache.Get(userId)
+		prompt = fmt.Sprintf("%s\nQ:%s\nA:", prompt, qStr)
+		res, err = services.Completions(prompt)
+	}
+	return
 }
 
 var _ MessageHandlerInterface = (*PersonalMessageHandler)(nil)
 
-func NewPersonalMessageHandler() MessageHandlerInterface {
+func NewPersonalMessageHandler() *PersonalMessageHandler {
 	return &PersonalMessageHandler{
 		userCache: services.GetUserCache(),
 		msgCache:  services.GetMsgCache(),

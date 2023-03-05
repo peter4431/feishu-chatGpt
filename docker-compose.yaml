@@ -3,5 +3,7 @@ services:
   feishu-chatgpt:
     build: .
     restart: always
+    volumes:
+    - ./code/config.yaml:/dist/config.yaml
     ports:
       - "9000:9000"
