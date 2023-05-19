@@ -79,8 +79,12 @@ type ChatCompletionRes struct {
 
 // ChatCompletion 新聊天接口
 func ChatCompletion(msgSlice []*types.ChatMsg) (string, error) {
+	model := viper.GetString("MODEL")
+	if model == "" {
+		model = chatCompletionModel
+	}
 	requestBody := ChatCompletionReq{
-		Model:            chatCompletionModel,
+		Model:            model,
 		Messages:         msgSlice,
 		Temperature:      temperature,
 		TopP:             1,
