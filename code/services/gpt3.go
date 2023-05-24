@@ -105,7 +105,7 @@ func ChatCompletion(msgSlice []*types.ChatMsg) (string, error) {
 	apiKey := viper.GetString("OPENAI_KEY")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-	client := &http.Client{Timeout: 110 * time.Second}
+	client := &http.Client{Timeout: 600 * time.Second}
 	response, err := client.Do(req)
 	if err != nil {
 		return "", err
